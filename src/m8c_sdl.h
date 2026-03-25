@@ -6,6 +6,13 @@
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_gamecontroller.h>
+#include <SDL2/SDL_mutex.h>
+
+typedef SDL_mutex SDL_Mutex;
+typedef SDL_cond SDL_Condition;
+#define SDL_CreateCondition() SDL_CreateCond()
+#define SDL_DestroyCondition SDL_DestroyCond
+#define SDL_SignalCondition SDL_CondSignal
 
 typedef int m8c_app_result;
 #define M8C_APP_CONTINUE 0
