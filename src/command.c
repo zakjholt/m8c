@@ -1,7 +1,7 @@
 // Copyright 2021 Jonne Kokkonen
 // Released under the MIT licence, https://opensource.org/licenses/MIT
 
-#include <SDL3/SDL.h>
+#include "m8c_sdl.h"
 
 #include "command.h"
 #include "render.h"

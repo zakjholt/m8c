@@ -5,7 +5,7 @@
 #ifndef QUEUE_H
 #define QUEUE_H
 
-#include <SDL3/SDL.h>
+#include "m8c_sdl.h"
 
 #define MAX_QUEUE_SIZE 8192
 

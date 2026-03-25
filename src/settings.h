@@ -3,7 +3,7 @@
 #ifndef SETTINGS_H_
 #define SETTINGS_H_
 
-#include <SDL3/SDL.h>
+#include "m8c_sdl.h"
 #include <stdbool.h>
 
 #include "config.h"

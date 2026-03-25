@@ -1,6 +1,7 @@
 #include "SDL2_inprint.h"
 
-#include <SDL3/SDL.h>
+#include "m8c_sdl.h"
+#include "m8c_sdl_compat.h"
 #include <math.h>
 
 // Handle screensaver cube effect
@@ -59,25 +60,22 @@ void fx_cube_init(SDL_Renderer *target_renderer, const SDL_Color foreground_colo
 
   SDL_Texture *og_target = SDL_GetRenderTarget(fx_renderer);
 
-  texture_size.x = (int)SDL_GetNumberProperty(SDL_GetTextureProperties(og_target),
-                                              SDL_PROP_TEXTURE_WIDTH_NUMBER, 0);
-  texture_size.y = (int)SDL_GetNumberProperty(SDL_GetTextureProperties(og_target),
-                                              SDL_PROP_TEXTURE_HEIGHT_NUMBER, 0);
+  m8c_query_texture_size(og_target, &texture_size.x, &texture_size.y);
 
   texture_cube = SDL_CreateTexture(fx_renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET,
                                    texture_size.x, texture_size.y);
   texture_text = SDL_CreateTexture(fx_renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET,
                                    texture_size.x, texture_size.y);
 
-  SDL_SetRenderTarget(fx_renderer, texture_text);
-  SDL_SetRenderDrawColor(fx_renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
-  SDL_RenderClear(fx_renderer);
+  M8C_SetRenderTarget(fx_renderer, texture_text);
+  M8C_SetRenderDrawColor(fx_renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
+  M8C_RenderClear(fx_renderer);
 
   inprint(fx_renderer, "M8 DEVICE NOT DETECTED", texture_width - font_glyph_width * 22 - 23,
           texture_height - 12, 0xFFFFFF, 0x000000);
   inprint(fx_renderer, "M8C", 2, 2, 0xFFFFFF, 0x000000);
 
-  SDL_SetRenderTarget(fx_renderer, og_target);
+  M8C_SetRenderTarget(fx_renderer, og_target);
 
   // Initialize default nodes
   SDL_memcpy(nodes, default_nodes, sizeof(default_nodes));
@@ -85,8 +83,8 @@ void fx_cube_init(SDL_Renderer *target_renderer, const SDL_Color foreground_colo
   scale(50, 50, 50);
   rotate_cube(M_PI / 6, SDL_atanf(SDL_sqrtf(2)));
 
-  SDL_SetTextureBlendMode(texture_cube, SDL_BLENDMODE_BLEND);
-  SDL_SetTextureBlendMode(texture_text, SDL_BLENDMODE_BLEND);
+  M8C_SetTextureBlendMode(texture_cube, SDL_BLENDMODE_BLEND);
+  M8C_SetTextureBlendMode(texture_text, SDL_BLENDMODE_BLEND);
 
   center_x = (int)(texture_size.x / 2.0);
   center_y = (int)(texture_size.y / 2.0);
@@ -98,9 +96,9 @@ void fx_cube_destroy(void) {
   SDL_DestroyTexture(texture_text);
 
   // Force clear renderer
-  SDL_SetRenderTarget(fx_renderer, NULL);
-  SDL_SetRenderDrawColor(fx_renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
-  SDL_RenderClear(fx_renderer);
+  M8C_SetRenderTarget(fx_renderer, NULL);
+  M8C_SetRenderDrawColor(fx_renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
+  M8C_RenderClear(fx_renderer);
 }
 
 // Update the cube texture every 16ms>. Returns 1 if cube was updated, 0 if no changes were made.
@@ -113,9 +111,9 @@ int fx_cube_update(void) {
     int points_counter = 0;
     SDL_Texture *og_texture = SDL_GetRenderTarget(fx_renderer);
 
-    SDL_SetRenderTarget(fx_renderer, texture_cube);
-    SDL_SetRenderDrawColor(fx_renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
-    SDL_RenderClear(fx_renderer);
+    M8C_SetRenderTarget(fx_renderer, texture_cube);
+    M8C_SetRenderDrawColor(fx_renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
+    M8C_RenderClear(fx_renderer);
 
     const Uint64 ms = SDL_GetTicks();
     const float t = (float)ms / 1000.0f;
@@ -130,12 +128,12 @@ int fx_cube_update(void) {
       points[points_counter++] = (SDL_FPoint){p2[0] * pulse + center_x, p2[1] * pulse + center_y};
     }
 
-    SDL_RenderTexture(fx_renderer, texture_text, NULL, NULL);
-    SDL_SetRenderDrawColor(fx_renderer, line_color.r, line_color.g, line_color.b, line_color.a);
-    SDL_RenderLines(fx_renderer, points, 24);
+    M8C_RenderTexture(fx_renderer, texture_text, NULL, NULL);
+    M8C_SetRenderDrawColor(fx_renderer, line_color.r, line_color.g, line_color.b, line_color.a);
+    M8C_RenderLines(fx_renderer, points, 24);
 
-    SDL_SetRenderTarget(fx_renderer, og_texture);
-    SDL_RenderTexture(fx_renderer, texture_cube, NULL, NULL);
+    M8C_SetRenderTarget(fx_renderer, og_texture);
+    M8C_RenderTexture(fx_renderer, texture_cube, NULL, NULL);
     return 1;
   }
   return 0;

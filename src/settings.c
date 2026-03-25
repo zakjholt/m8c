@@ -3,10 +3,11 @@
 #include "SDL2_inprint.h"
 #include "backends/audio.h"
 #include "common.h"
+#include "m8c_sdl.h"
+#include "m8c_sdl_compat.h"
 #include "render.h"
 
 #include "fonts/fonts.h"
-#include <SDL3/SDL.h>
 
 // Constants for the UI
 #define SETTINGS_MAX_ITEMS 64
@@ -418,12 +419,11 @@ void settings_handle_event(struct app_context *ctx, const SDL_Event *e) {
    * iOS sends both keyboard and gamepad events on gamepad button presses.
    * Workaround here is to ignore the keyboard events on iOS, if a gamepad is connected.
    */
-  int gamepad_count = 0;
-  SDL_GetGamepads(&gamepad_count);
+  const int gamepad_count = m8c_get_connected_gamepad_count();
 
   if (TARGET_OS_IOS == 0 || gamepad_count == 0) {
     if (e->type == SDL_EVENT_KEY_DOWN) {
-      if (e->key.key == SDLK_ESCAPE || e->key.key == SDLK_F1) {
+      if (M8C_EVENT_KEY_SYM(e) == SDLK_ESCAPE || M8C_EVENT_KEY_SYM(e) == SDLK_F1) {
         settings_handle_back();
         return;
       }
@@ -431,26 +431,26 @@ void settings_handle_event(struct app_context *ctx, const SDL_Event *e) {
       if (g_settings.capture_mode == CAPTURE_KEY) {
         if (g_settings.capture_target != NULL) {
           unsigned int *dst = g_settings.capture_target;
-          *dst = e->key.scancode;
+          *dst = M8C_EVENT_KEY_SCANCODE(e);
         }
         g_settings.capture_mode = CAPTURE_NONE;
         g_settings.capture_target = NULL;
         g_settings.needs_redraw = 1;
         return;
       }
-      if (e->key.key == SDLK_UP) {
+      if (M8C_EVENT_KEY_SYM(e) == SDLK_UP) {
         settings_move(&ctx->conf, -1);
         return;
       }
-      if (e->key.key == SDLK_DOWN) {
+      if (M8C_EVENT_KEY_SYM(e) == SDLK_DOWN) {
         settings_move(&ctx->conf, 1);
         return;
       }
-      if (e->key.key == SDLK_LEFT || e->key.key == SDLK_RIGHT) {
-        if (settings_adjust_selected(&ctx->conf, e->key.key == SDLK_LEFT ? -1 : 1))
+      if (M8C_EVENT_KEY_SYM(e) == SDLK_LEFT || M8C_EVENT_KEY_SYM(e) == SDLK_RIGHT) {
+        if (settings_adjust_selected(&ctx->conf, M8C_EVENT_KEY_SYM(e) == SDLK_LEFT ? -1 : 1))
           return;
       }
-      if (e->key.key == SDLK_RETURN || e->key.key == SDLK_SPACE) {
+      if (M8C_EVENT_KEY_SYM(e) == SDLK_RETURN || M8C_EVENT_KEY_SYM(e) == SDLK_SPACE) {
         settings_handle_enter(ctx);
         return;
       }
@@ -459,7 +459,7 @@ void settings_handle_event(struct app_context *ctx, const SDL_Event *e) {
 
   // Gamepad navigation and cancel/back handling
   if (e->type == SDL_EVENT_GAMEPAD_BUTTON_DOWN) {
-    SDL_GamepadButton btn = e->gbutton.button;
+    SDL_GamepadButton btn = M8C_EVENT_GP_BTN(e);
 
     // If capturing a button, let the capture handler below process it
     if (g_settings.capture_mode == CAPTURE_NONE) {
@@ -496,7 +496,7 @@ void settings_handle_event(struct app_context *ctx, const SDL_Event *e) {
   if (g_settings.capture_mode == CAPTURE_BUTTON && e->type == SDL_EVENT_GAMEPAD_BUTTON_DOWN) {
     if (g_settings.capture_target != NULL) {
       int *dst = (int *)g_settings.capture_target;
-      *dst = e->gbutton.button;
+      *dst = M8C_EVENT_GP_BTN(e);
     }
     g_settings.capture_mode = CAPTURE_NONE;
     g_settings.capture_target = NULL;
@@ -506,10 +506,10 @@ void settings_handle_event(struct app_context *ctx, const SDL_Event *e) {
   
   // Capture axis on significant motion
   if (g_settings.capture_mode == CAPTURE_AXIS && e->type == SDL_EVENT_GAMEPAD_AXIS_MOTION) {
-    if (SDL_abs(e->gaxis.value) > 16000) {
+    if (SDL_abs(M8C_EVENT_GP_AXIS_VAL(e)) > 16000) {
       if (g_settings.capture_target != NULL) {
         int *dst = (int *)g_settings.capture_target;
-        *dst = e->gaxis.axis;
+        *dst = M8C_EVENT_GP_AXIS(e);
       }
       g_settings.capture_mode = CAPTURE_NONE;
       g_settings.capture_target = NULL;
@@ -539,8 +539,8 @@ void settings_render_overlay(SDL_Renderer *rend, const config_params_s *conf, in
       inline_font_initialize(previous_font);
       return;
     }
-    SDL_SetTextureBlendMode(g_settings.texture, SDL_BLENDMODE_BLEND);
-    SDL_SetTextureScaleMode(g_settings.texture, SDL_SCALEMODE_NEAREST);
+    M8C_SetTextureBlendMode(g_settings.texture, SDL_BLENDMODE_BLEND);
+    M8C_SetTextureScaleMode(g_settings.texture, SDL_SCALEMODE_NEAREST);
     g_settings.needs_redraw = 1;
   }
 
@@ -549,11 +549,11 @@ void settings_render_overlay(SDL_Renderer *rend, const config_params_s *conf, in
   g_settings.needs_redraw = 0;
 
   SDL_Texture *prev = SDL_GetRenderTarget(rend);
-  SDL_SetRenderTarget(rend, g_settings.texture);
+  M8C_SetRenderTarget(rend, g_settings.texture);
 
   // Background
-  SDL_SetRenderDrawColor(rend, 0, 0, 0, 240);
-  SDL_RenderClear(rend);
+  M8C_SetRenderDrawColor(rend, 0, 0, 0, 240);
+  M8C_RenderClear(rend);
 
   // Title and items
   const Uint32 fg = 0xFFFFFF;
@@ -662,14 +662,14 @@ void settings_render_overlay(SDL_Renderer *rend, const config_params_s *conf, in
 
       if (pad) {
         // Use controller-specific face button labels when possible
-        SDL_GamepadButtonLabel lbl = SDL_GetGamepadButtonLabel(pad, (SDL_GamepadButton)v);
+        SDL_GamepadButtonLabel lbl = m8c_get_gamepad_button_label(pad, (SDL_GamepadButton)v);
         if (lbl != SDL_GAMEPAD_BUTTON_LABEL_UNKNOWN) {
-          name = SDL_GetGamepadStringForButton(v);
+          name = m8c_get_gamepad_string_for_button((SDL_GamepadButton)v);
         }
       }
       // Generic fallback by standardized button name
       if (name == NULL || name[0] == '\0') {
-        name = SDL_GetGamepadStringForButton((SDL_GamepadButton)v);
+        name = m8c_get_gamepad_string_for_button((SDL_GamepadButton)v);
       }
 
       char line[SETTINGS_MAX_LINE_LENGTH];
@@ -685,7 +685,7 @@ void settings_render_overlay(SDL_Renderer *rend, const config_params_s *conf, in
     }
     if (it->type == ITEM_BIND_AXIS) {
       int v = *(int *)it->target;
-      const char *name = SDL_GetGamepadStringForAxis((SDL_GamepadAxis)v);
+      const char *name = m8c_get_gamepad_string_for_axis((SDL_GamepadAxis)v);
 
       char line[SETTINGS_MAX_LINE_LENGTH];
       if (name && name[0] != '\0') {
@@ -723,10 +723,10 @@ void settings_render_overlay(SDL_Renderer *rend, const config_params_s *conf, in
     }
   }
 
-  SDL_SetRenderTarget(rend, prev);
+  M8C_SetRenderTarget(rend, prev);
 
 composite:
-  SDL_RenderTexture(rend, g_settings.texture, NULL, NULL);
+  M8C_RenderTexture(rend, g_settings.texture, NULL, NULL);
   if (previous_font->glyph_x != fonts_get(0)->glyph_x) {
     inline_font_close();
     inline_font_initialize(previous_font);

@@ -2,7 +2,7 @@
 // Released under the MIT licence, https://opensource.org/licenses/MIT
 #ifndef USE_LIBUSB
 #include "audio.h"
-#include <SDL3/SDL.h>
+#include "m8c_sdl.h"
 
 SDL_AudioStream *audio_stream_in, *audio_stream_out;
 

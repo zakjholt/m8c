@@ -3,7 +3,7 @@
 
 #include "config.h"
 #include "ini.h"
-#include <SDL3/SDL.h>
+#include "m8c_sdl.h"
 #include <assert.h>
 #include <ctype.h>
 #include <stdio.h>
@@ -86,7 +86,11 @@ void write_config(const config_params_s *conf) {
   // Open the default config file for writing
   char config_path[1024] = {0};
   snprintf(config_path, sizeof(config_path), "%s%s", SDL_GetPrefPath("", "m8c"), conf->filename);
+#ifdef M8C_USE_SDL2
+  SDL_RWops *rw = SDL_RWFromFile(config_path, "w");
+#else
   SDL_IOStream *rw = SDL_IOFromFile(config_path, "w");
+#endif
 
   SDL_Log("Writing config file to %s", config_path);
 
@@ -173,13 +177,21 @@ void write_config(const config_params_s *conf) {
     // Write ini_values array to config file
     for (unsigned int i = 0; i < INI_LINE_COUNT; i++) {
       const size_t len = SDL_strlen(ini_values[i]);
+#ifdef M8C_USE_SDL2
+      if (SDL_RWwrite(rw, ini_values[i], 1, len) != len) {
+#else
       if (SDL_WriteIO(rw, ini_values[i], len) != len) {
+#endif
         SDL_LogDebug(SDL_LOG_CATEGORY_SYSTEM, "Couldn't write line into config file.");
       } else {
         SDL_LogDebug(SDL_LOG_CATEGORY_SYSTEM, "Wrote to config: %s", ini_values[i]);
       }
     }
+#ifdef M8C_USE_SDL2
+    SDL_RWclose(rw);
+#else
     SDL_CloseIO(rw);
+#endif
   } else {
     SDL_Log("Couldn't write into config file.");
   }
@@ -317,7 +329,7 @@ void read_key_config(const ini_t *ini, config_params_s *conf) {
   if (key_toggle_audio)
     conf->key_toggle_audio = SDL_atoi(key_toggle_audio);
   if (key_toggle_settings)
-    conf->key_toggle_log = SDL_atoi(key_toggle_settings);
+    conf->key_toggle_settings = SDL_atoi(key_toggle_settings);
   if (key_toggle_log)
     conf->key_toggle_log = SDL_atoi(key_toggle_log);
 }

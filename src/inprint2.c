@@ -3,7 +3,8 @@
 // Modified to support multiple fonts & adding a background to text.
 
 #include "fonts/fonts.h"
-#include <SDL3/SDL.h>
+#include "m8c_sdl.h"
+#include "m8c_sdl_compat.h"
 
 #define CHARACTERS_PER_ROW 94
 #define CHARACTERS_PER_COLUMN 1
@@ -27,6 +28,12 @@ void inline_font_initialize(const struct inline_font *font) {
   selected_font_w = selected_inline_font->width;
   selected_font_h = selected_inline_font->height;
 
+#ifdef M8C_USE_SDL2
+  SDL_RWops *font_rw =
+      SDL_RWFromConstMem(selected_inline_font->image_data, selected_inline_font->image_size);
+  SDL_Surface *surface = SDL_LoadBMP_RW(font_rw, 1);
+  SDL_SetColorKey(surface, SDL_TRUE, SDL_MapRGB(surface->format, 0, 0, 0));
+#else
   SDL_IOStream *font_bmp =
       SDL_IOFromConstMem(selected_inline_font->image_data, selected_inline_font->image_size);
 
@@ -34,10 +41,15 @@ void inline_font_initialize(const struct inline_font *font) {
 
   // Black is transparent
   SDL_SetSurfaceColorKey(surface, true, SDL_MapSurfaceRGB(surface, 0, 0, 0));
+#endif
 
   inline_font = SDL_CreateTextureFromSurface(selected_renderer, surface);
 
+#ifdef M8C_USE_SDL2
+  SDL_FreeSurface(surface);
+#else
   SDL_DestroySurface(surface);
+#endif
 
   selected_font = inline_font;
 }
@@ -55,14 +67,13 @@ void infont(SDL_Texture *font) {
     return;
   }
 
-  const int w =
-      (int)SDL_GetNumberProperty(SDL_GetTextureProperties(font), SDL_PROP_TEXTURE_WIDTH_NUMBER, 0);
-  const int h =
-      (int)SDL_GetNumberProperty(SDL_GetTextureProperties(font), SDL_PROP_TEXTURE_HEIGHT_NUMBER, 0);
+  int w = 0;
+  int h = 0;
+  m8c_query_texture_size(font, &w, &h);
 
   selected_font = font;
-  selected_font_w = w;
-  selected_font_h = h;
+  selected_font_w = (Uint16)w;
+  selected_font_h = (Uint16)h;
 }
 void incolor1(const SDL_Color *color) {
   SDL_SetTextureColorMod(selected_font, color->r, color->g, color->b);
@@ -117,17 +128,17 @@ void inprint(SDL_Renderer *dst, const char *str, Uint32 x, Uint32 y, const Uint3
     }
 
     if (bgcolor != fgcolor) {
-      SDL_SetRenderDrawColor(selected_renderer, (bgcolor & 0x00FF0000) >> 16,
+      M8C_SetRenderDrawColor(selected_renderer, (bgcolor & 0x00FF0000) >> 16,
                              (bgcolor & 0x0000FF00) >> 8, bgcolor & 0x000000FF, 0xFF);
       bg_rect = d_rect;
       bg_rect.w = (float)selected_inline_font->glyph_x;
       bg_rect.h = (float)selected_inline_font->glyph_y;
 
-      SDL_RenderFillRect(dst, &bg_rect);
+      M8C_RenderFillRect(dst, &bg_rect);
     }
     // Do not try to render a whitespace character because the font doesn't have one
     if (ascii_code != 32) {
-      SDL_RenderTexture(dst, selected_font, &s_rect, &d_rect);
+      M8C_RenderTexture(dst, selected_font, &s_rect, &d_rect);
     }
     d_rect.x += (float)selected_inline_font->glyph_x + 1;
   }

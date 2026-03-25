@@ -4,7 +4,7 @@
 #ifndef LOG_OVERLAY_H_
 #define LOG_OVERLAY_H_
 
-#include <SDL3/SDL.h>
+#include "m8c_sdl.h"
 
 // Initialize SDL log capture to mirror messages into the in-app overlay buffer
 void log_overlay_init(void);

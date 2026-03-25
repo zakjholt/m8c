@@ -1,5 +1,5 @@
 #include "queue.h"
-#include <SDL3/SDL.h>
+#include "m8c_sdl.h"
 #include <stdlib.h>
 #include <string.h>
 

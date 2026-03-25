@@ -3,7 +3,8 @@
 
 #include "log_overlay.h"
 
-#include <SDL3/SDL.h>
+#include "m8c_sdl.h"
+#include "m8c_sdl_compat.h"
 
 #include "SDL2_inprint.h"
 #include "fonts/fonts.h"
@@ -120,8 +121,8 @@ void log_overlay_render(SDL_Renderer *renderer, int logical_texture_width,
       SDL_LogError(SDL_LOG_CATEGORY_RENDER, "Couldn't create log texture: %s", SDL_GetError());
       return;
     }
-    SDL_SetTextureBlendMode(overlay_texture, SDL_BLENDMODE_BLEND);
-    SDL_SetTextureScaleMode(overlay_texture, scale_mode);
+    M8C_SetTextureBlendMode(overlay_texture, SDL_BLENDMODE_BLEND);
+    M8C_SetTextureScaleMode(overlay_texture, scale_mode);
   }
 
   // Only update the overlay texture when its contents changed.
@@ -153,12 +154,12 @@ void log_overlay_render(SDL_Renderer *renderer, int logical_texture_width,
 
     // Bind the overlay texture as the render target and clear it with a translucent background.
     SDL_Texture *prev_target = SDL_GetRenderTarget(renderer);
-    if (!SDL_SetRenderTarget(renderer, overlay_texture)) {
+    if (!M8C_SetRenderTarget(renderer, overlay_texture)) {
       SDL_LogError(SDL_LOG_CATEGORY_RENDER, "Failed to set render target: %s", SDL_GetError());
     }
 
-    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 220);
-    SDL_RenderClear(renderer);
+    M8C_SetRenderDrawColor(renderer, 0, 0, 0, 220);
+    M8C_RenderClear(renderer);
 
     // Switch to a small font for the overlay; remember previous mode to restore later.
     const int prev_font_mode = font_mode_current;
@@ -256,7 +257,7 @@ void log_overlay_render(SDL_Renderer *renderer, int logical_texture_width,
     // Restore previous font mode and previous render target.
     inline_font_close();
     inline_font_initialize(fonts_get(prev_font_mode));
-    SDL_SetRenderTarget(renderer, prev_target);
+    M8C_SetRenderTarget(renderer, prev_target);
 
     // Free the snapshot after rendering.
     if (snapshot) {
@@ -266,7 +267,7 @@ void log_overlay_render(SDL_Renderer *renderer, int logical_texture_width,
 
   // Composite the overlay texture to the current render target every frame while visible.
   if (overlay_texture) {
-    if (!SDL_RenderTexture(renderer, overlay_texture, NULL, NULL)) {
+    if (!M8C_RenderTexture(renderer, overlay_texture, NULL, NULL)) {
       SDL_LogCritical(SDL_LOG_CATEGORY_RENDER, "Couldn't render log overlay texture: %s",
                       SDL_GetError());
     }

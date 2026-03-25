@@ -7,9 +7,13 @@
 
 #define APP_VERSION "v2.2.4"
 
-#include <SDL3/SDL.h>
+#include "m8c_sdl.h"
+
+#ifndef M8C_USE_SDL2
 #define SDL_MAIN_USE_CALLBACKS
 #include <SDL3/SDL_main.h>
+#endif
+
 #include <stdlib.h>
 
 #include "SDL2_inprint.h"
@@ -17,6 +21,7 @@
 #include "backends/m8.h"
 #include "common.h"
 #include "config.h"
+#include "events.h"
 #include "gamepads.h"
 #include "render.h"
 #include "log_overlay.h"
@@ -100,14 +105,13 @@ static config_params_s initialize_config(int argc, char *argv[], char **preferre
   return conf;
 }
 
-// Main callback loop - read inputs, process data from the device, render screen
-SDL_AppResult SDL_AppIterate(void *appstate) {
+static m8c_app_result m8c_iterate_impl(void *appstate) {
   if (appstate == NULL) {
-    return SDL_APP_FAILURE;
+    return M8C_APP_FAILURE;
   }
 
   struct app_context *ctx = appstate;
-  SDL_AppResult app_result = SDL_APP_CONTINUE;
+  m8c_app_result app_result = M8C_APP_CONTINUE;
 
   switch (ctx->app_state) {
   case INITIALIZE:
@@ -120,7 +124,7 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
   case RUN: {
     // Handle app suspension
     if (ctx->app_suspended) {
-      return SDL_APP_CONTINUE;
+      return M8C_APP_CONTINUE;
     }
     const int result = m8_process_data(&ctx->conf);
     if (result == DEVICE_DISCONNECTED) {
@@ -128,83 +132,22 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
       ctx->app_state = WAIT_FOR_DEVICE;
       audio_close();
     } else if (result == DEVICE_FATAL_ERROR) {
-      return SDL_APP_FAILURE;
+      return M8C_APP_FAILURE;
     }
     render_screen(&ctx->conf);
     break;
   }
 
   case QUIT:
-    app_result = SDL_APP_SUCCESS;
+    app_result = M8C_APP_SUCCESS;
     break;
   }
 
   return app_result;
 }
 
-// Initialize the app: initialize context, configs, renderer controllers and attempt to find M8
-SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv) {
-  SDL_SetAppMetadata("M8C",APP_VERSION,"fi.laamaa.m8c");
-
-  char *config_filename = NULL;
-
-  // Initialize in-app log capture/overlay
-  log_overlay_init();
-
-#ifndef NDEBUG
-  // Show debug messages in the application log
-  SDL_SetLogPriorities(SDL_LOG_PRIORITY_DEBUG);
-  SDL_LogDebug(SDL_LOG_CATEGORY_TEST, "Running a Debug build");
-#else
-  // Show debug messages in the application log
-  SDL_SetLogPriorities(SDL_LOG_PRIORITY_INFO);
-#endif
-
-  // Process the application's main callback roughly at 120 Hz
-  SDL_SetHint(SDL_HINT_MAIN_CALLBACK_RATE, "120");
-
-  struct app_context *ctx = SDL_calloc(1, sizeof(struct app_context));
-  if (ctx == NULL) {
-    SDL_LogCritical(SDL_LOG_CATEGORY_SYSTEM, "SDL_calloc failed: %s", SDL_GetError());
-    return SDL_APP_FAILURE;
-  }
-
-  *appstate = ctx;
-  ctx->app_state = INITIALIZE;
-  ctx->conf = initialize_config(argc, argv, &ctx->preferred_device, &config_filename);
-
-  if (!renderer_initialize(&ctx->conf)) {
-    SDL_LogCritical(SDL_LOG_CATEGORY_ERROR, "Failed to initialize renderer.");
-    return SDL_APP_FAILURE;
-  }
-
-  ctx->device_connected =
-      m8_initialize(1, ctx->preferred_device);
-
-  if (gamepads_initialize() < 0) {
-    SDL_LogCritical(SDL_LOG_CATEGORY_ERROR, "Failed to initialize game controllers.");
-    return SDL_APP_FAILURE;
-  }
-
-  if (ctx->device_connected && m8_enable_display(1)) {
-    if (ctx->conf.audio_enabled) {
-      audio_initialize(ctx->conf.audio_device_name, ctx->conf.audio_buffer_size);
-    }
-    ctx->app_state = RUN;
-    render_screen(&ctx->conf);
-  } else {
-    SDL_LogCritical(SDL_LOG_CATEGORY_ERROR, "Device not detected.");
-    ctx->device_connected = 0;
-    ctx->app_state = WAIT_FOR_DEVICE;
-  }
-
-  return SDL_APP_CONTINUE;
-}
-
-void SDL_AppQuit(void *appstate, SDL_AppResult result) {
+static void m8c_shutdown(struct app_context *app, m8c_app_result result) {
   (void)result; // Suppress compiler warning
-
-  struct app_context *app = appstate;
 
   if (app) {
     if (app->app_state == WAIT_FOR_DEVICE) {
@@ -225,3 +168,118 @@ void SDL_AppQuit(void *appstate, SDL_AppResult result) {
     SDL_Quit();
   }
 }
+
+static m8c_app_result m8c_startup(struct app_context **out_ctx, int argc, char **argv) {
+#ifndef M8C_USE_SDL2
+  SDL_SetAppMetadata("M8C", APP_VERSION, "fi.laamaa.m8c");
+#endif
+
+  char *config_filename = NULL;
+
+  // Initialize in-app log capture/overlay
+  log_overlay_init();
+
+#ifndef NDEBUG
+  // Show debug messages in the application log
+#ifdef M8C_USE_SDL2
+  SDL_LogSetAllPriority(SDL_LOG_PRIORITY_DEBUG);
+#else
+  SDL_SetLogPriorities(SDL_LOG_PRIORITY_DEBUG);
+#endif
+  SDL_LogDebug(SDL_LOG_CATEGORY_TEST, "Running a Debug build");
+#else
+#ifdef M8C_USE_SDL2
+  SDL_LogSetAllPriority(SDL_LOG_PRIORITY_INFO);
+#else
+  SDL_SetLogPriorities(SDL_LOG_PRIORITY_INFO);
+#endif
+#endif
+
+#ifndef M8C_USE_SDL2
+  // Process the application's main callback roughly at 120 Hz
+  SDL_SetHint(SDL_HINT_MAIN_CALLBACK_RATE, "120");
+#endif
+
+  struct app_context *ctx = SDL_calloc(1, sizeof(struct app_context));
+  if (ctx == NULL) {
+    SDL_LogCritical(SDL_LOG_CATEGORY_SYSTEM, "SDL_calloc failed: %s", SDL_GetError());
+    return M8C_APP_FAILURE;
+  }
+
+  *out_ctx = ctx;
+  ctx->app_state = INITIALIZE;
+  ctx->conf = initialize_config(argc, argv, &ctx->preferred_device, &config_filename);
+
+  if (!renderer_initialize(&ctx->conf)) {
+    SDL_LogCritical(SDL_LOG_CATEGORY_ERROR, "Failed to initialize renderer.");
+    SDL_free(ctx);
+    *out_ctx = NULL;
+    return M8C_APP_FAILURE;
+  }
+
+  ctx->device_connected = m8_initialize(1, ctx->preferred_device);
+
+  if (gamepads_initialize() < 0) {
+    SDL_LogCritical(SDL_LOG_CATEGORY_ERROR, "Failed to initialize game controllers.");
+    m8c_shutdown(ctx, M8C_APP_FAILURE);
+    *out_ctx = NULL;
+    return M8C_APP_FAILURE;
+  }
+
+  if (ctx->device_connected && m8_enable_display(1)) {
+    if (ctx->conf.audio_enabled) {
+      audio_initialize(ctx->conf.audio_device_name, ctx->conf.audio_buffer_size);
+    }
+    ctx->app_state = RUN;
+    render_screen(&ctx->conf);
+  } else {
+    SDL_LogCritical(SDL_LOG_CATEGORY_ERROR, "Device not detected.");
+    ctx->device_connected = 0;
+    ctx->app_state = WAIT_FOR_DEVICE;
+  }
+
+  return M8C_APP_CONTINUE;
+}
+
+#ifdef M8C_USE_SDL2
+
+int main(int argc, char *argv[]) {
+  struct app_context *ctx = NULL;
+  if (m8c_startup(&ctx, argc, argv) != M8C_APP_CONTINUE) {
+    return 1;
+  }
+  for (;;) {
+    SDL_Event e;
+    while (SDL_PollEvent(&e)) {
+      m8c_app_result er = m8c_handle_event(ctx, &e);
+      if (er != M8C_APP_CONTINUE) {
+        m8c_shutdown(ctx, er);
+        return er == M8C_APP_SUCCESS ? 0 : 1;
+      }
+    }
+    m8c_app_result ir = m8c_iterate_impl(ctx);
+    if (ir != M8C_APP_CONTINUE) {
+      m8c_shutdown(ctx, ir);
+      return ir == M8C_APP_SUCCESS ? 0 : 1;
+    }
+  }
+}
+
+#else /* SDL3 */
+
+SDL_AppResult SDL_AppIterate(void *appstate) { return m8c_iterate_impl(appstate); }
+
+SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv) {
+  struct app_context *ctx = NULL;
+  m8c_app_result r = m8c_startup(&ctx, argc, argv);
+  *appstate = ctx;
+  return r;
+}
+
+void SDL_AppQuit(void *appstate, SDL_AppResult result) { m8c_shutdown(appstate, result); }
+
+SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
+  return m8c_handle_event(appstate, event);
+}
+
+#endif
