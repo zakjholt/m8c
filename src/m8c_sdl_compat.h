@@ -5,11 +5,6 @@
 
 #ifdef M8C_USE_SDL2
 
-typedef SDL_GameControllerButtonLabel SDL_GamepadButtonLabel;
-#ifndef SDL_GAMEPAD_BUTTON_LABEL_UNKNOWN
-#define SDL_GAMEPAD_BUTTON_LABEL_UNKNOWN SDL_CONTROLLER_BUTTON_LABEL_UNKNOWN
-#endif
-
 int m8c_create_window_and_renderer(const char *title, int w, int h, Uint32 flags, SDL_Window **win,
                                    SDL_Renderer **rend);
 int m8c_set_render_logical_presentation(SDL_Renderer *rend, int w, int h, int mode);

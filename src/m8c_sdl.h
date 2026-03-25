@@ -7,6 +7,20 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_gamecontroller.h>
 #include <SDL2/SDL_mutex.h>
+#include <SDL2/SDL_version.h>
+
+#if !SDL_VERSION_ATLEAST(2, 0, 10)
+typedef struct SDL_FPoint {
+  float x;
+  float y;
+} SDL_FPoint;
+typedef struct SDL_FRect {
+  float x;
+  float y;
+  float w;
+  float h;
+} SDL_FRect;
+#endif
 
 typedef SDL_mutex SDL_Mutex;
 typedef SDL_cond SDL_Condition;
@@ -22,6 +36,15 @@ typedef int m8c_app_result;
 typedef SDL_GameController SDL_Gamepad;
 typedef SDL_GameControllerButton SDL_GamepadButton;
 typedef SDL_GameControllerAxis SDL_GamepadAxis;
+
+#if SDL_VERSION_ATLEAST(2, 0, 10)
+typedef SDL_GameControllerButtonLabel SDL_GamepadButtonLabel;
+#define SDL_GAMEPAD_BUTTON_LABEL_UNKNOWN SDL_CONTROLLER_BUTTON_LABEL_UNKNOWN
+#else
+typedef enum SDL_GamepadButtonLabel {
+  SDL_GAMEPAD_BUTTON_LABEL_UNKNOWN = 0,
+} SDL_GamepadButtonLabel;
+#endif
 
 #ifndef SDL_GAMEPAD_AXIS_COUNT
 #define SDL_GAMEPAD_AXIS_COUNT (SDL_CONTROLLER_AXIS_MAX + 1)
@@ -48,8 +71,6 @@ typedef SDL_GameControllerAxis SDL_GamepadAxis;
 #define SDL_GAMEPAD_BUTTON_DPAD_DOWN SDL_CONTROLLER_BUTTON_DPAD_DOWN
 #define SDL_GAMEPAD_BUTTON_DPAD_LEFT SDL_CONTROLLER_BUTTON_DPAD_LEFT
 #define SDL_GAMEPAD_BUTTON_DPAD_RIGHT SDL_CONTROLLER_BUTTON_DPAD_RIGHT
-
-#define SDL_GAMEPAD_BUTTON_LABEL_UNKNOWN SDL_CONTROLLER_BUTTON_LABEL_UNKNOWN
 
 #define SDL_KMOD_GUI KMOD_GUI
 

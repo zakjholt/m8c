@@ -63,7 +63,13 @@ const char *m8c_get_gamepad_string_for_axis(SDL_GamepadAxis a) {
 }
 
 SDL_GamepadButtonLabel m8c_get_gamepad_button_label(SDL_Gamepad *pad, SDL_GamepadButton btn) {
+#if SDL_VERSION_ATLEAST(2, 0, 10)
   return SDL_GameControllerGetButtonLabel((SDL_GameController *)pad, (SDL_GameControllerButton)btn);
+#else
+  (void)pad;
+  (void)btn;
+  return SDL_GAMEPAD_BUTTON_LABEL_UNKNOWN;
+#endif
 }
 
 void m8c_query_texture_size(SDL_Texture *t, int *w, int *h) { SDL_QueryTexture(t, NULL, NULL, w, h); }
