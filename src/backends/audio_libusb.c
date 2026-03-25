@@ -1,7 +1,7 @@
-#include "SDL3/SDL_audio.h"
-#include "SDL3/SDL_error.h"
 #ifdef USE_LIBUSB
 
+#include "SDL3/SDL_audio.h"
+#include "SDL3/SDL_error.h"
 #include "m8.h"
 #include "ringbuffer.h"
 #include <SDL3/SDL.h>

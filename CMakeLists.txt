@@ -23,6 +23,15 @@ if (M8C_USE_SDL2)
     list(APPEND m8c_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/m8c_sdl_compat.c")
 endif ()
 
+if (NOT USE_LIBUSB)
+    list(FILTER m8c_SRC EXCLUDE REGEX ".*/m8_libusb\\.c$")
+    list(FILTER m8c_SRC EXCLUDE REGEX ".*/audio_libusb\\.c$")
+endif ()
+
+if (NOT USE_RTMIDI)
+    list(FILTER m8c_SRC EXCLUDE REGEX ".*/m8_rtmidi\\.c$")
+endif ()
+
 set(MACOS_CONTENTS "${CMAKE_CURRENT_SOURCE_DIR}/package/macos/m8c.app/Contents")
 set(MACOS_ENTITLEMENTS_FILE "${CMAKE_CURRENT_SOURCE_DIR}/package/macos/Entitlements.plist")
 
@@ -37,6 +46,8 @@ elseif (WIN32)
 else ()
     add_executable(${APP_NAME} ${m8c_SRC})
 endif ()
+
+target_include_directories(${APP_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
 find_package(PkgConfig REQUIRED)
 
