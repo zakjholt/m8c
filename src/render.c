@@ -199,7 +199,7 @@ static void check_and_adjust_window_and_texture_size(const int new_width, const 
 
   main_texture = SDL_CreateTexture(rend, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET,
                                    texture_width, texture_height);
-  SDL_SetTextureScaleMode(main_texture, texture_scaling_mode);
+  M8C_SetTextureScaleMode(main_texture, texture_scaling_mode);
   SDL_SetRenderTarget(rend, main_texture);
 
   // Notify settings overlay about logical render size change so it can recreate its cache

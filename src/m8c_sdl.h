@@ -7,7 +7,16 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_gamecontroller.h>
 #include <SDL2/SDL_mutex.h>
+#include <SDL2/SDL_render.h>
 #include <SDL2/SDL_version.h>
+
+#if !SDL_VERSION_ATLEAST(2, 0, 12)
+typedef enum SDL_ScaleMode {
+  SDL_ScaleModeNearest = 0,
+  SDL_ScaleModeLinear = 1,
+  SDL_ScaleModeBest = 2
+} SDL_ScaleMode;
+#endif
 
 #if !SDL_VERSION_ATLEAST(2, 0, 10)
 typedef struct SDL_FPoint {
@@ -73,6 +82,7 @@ typedef enum SDL_GamepadButtonLabel {
 #define SDL_GAMEPAD_BUTTON_DPAD_RIGHT SDL_CONTROLLER_BUTTON_DPAD_RIGHT
 
 #define SDL_KMOD_GUI KMOD_GUI
+#define SDL_KMOD_ALT KMOD_ALT
 
 #define M8C_EVENT_KEY_TYPE(ev) ((ev)->type)
 
@@ -123,7 +133,16 @@ typedef enum SDL_GamepadButtonLabel {
 #define M8C_RenderPoints(rend, pts, n) (m8c_render_points_f((rend), (pts), (n)))
 #define M8C_RenderLines(rend, pts, n) (m8c_render_lines_f((rend), (pts), (n)))
 #define M8C_SetRenderTarget(rend, tex) (SDL_SetRenderTarget((rend), (tex)) == 0)
+#if SDL_VERSION_ATLEAST(2, 0, 12)
 #define M8C_SetTextureScaleMode(t, m) (SDL_SetTextureScaleMode((t), (m)) == 0)
+#else
+static inline int m8c_set_texture_scale_mode_stub(SDL_Texture *t, SDL_ScaleMode m) {
+  (void)t;
+  (void)m;
+  return 0;
+}
+#define M8C_SetTextureScaleMode(t, m) (m8c_set_texture_scale_mode_stub((t), (m)) == 0)
+#endif
 #define M8C_SetTextureBlendMode(t, m) (SDL_SetTextureBlendMode((t), (m)) == 0)
 #define M8C_SetRenderVSync(rend, on) (m8c_set_render_vsync((rend), (on)))
 
