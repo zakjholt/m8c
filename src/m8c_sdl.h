@@ -84,6 +84,9 @@ typedef enum SDL_GamepadButtonLabel {
 #define SDL_KMOD_GUI KMOD_GUI
 #define SDL_KMOD_ALT KMOD_ALT
 
+#define SDL_GetLogOutputFunction SDL_LogGetOutputFunction
+#define SDL_SetLogOutputFunction SDL_LogSetOutputFunction
+
 #define M8C_EVENT_KEY_TYPE(ev) ((ev)->type)
 
 #define M8C_ShowCursor() SDL_ShowCursor(SDL_ENABLE)
